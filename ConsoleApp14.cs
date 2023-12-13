@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Newtonsoft.Json;
 
 public class User
 {
@@ -13,21 +14,30 @@ public class User
 
 public static class Leaderboard
 {
-    private static List<User> users = new List<User>();
+    private static List<User> users;
     private static string leaderboardFilePath = "leaderboard.json";
+
+    static Leaderboard()
+    {
+        LoadLeaderboard();
+    }
 
     public static void LoadLeaderboard()
     {
         if (File.Exists(leaderboardFilePath))
         {
             string json = File.ReadAllText(leaderboardFilePath);
-            users = Newtonsoft.Json.JsonConvert.DeserializeObject<List<User>>(json);
+            users = JsonConvert.DeserializeObject<List<User>>(json);
+        }
+        else
+        {
+            users = new List<User>();
         }
     }
 
     public static void SaveLeaderboard()
     {
-        string json = Newtonsoft.Json.JsonConvert.SerializeObject(users);
+        string json = JsonConvert.SerializeObject(users);
         File.WriteAllText(leaderboardFilePath, json);
     }
 
@@ -58,10 +68,10 @@ public class TypingTest
         Console.Clear();
         Console.WriteLine($"Welcome, {user.Name}! Get ready for the typing test.\n");
 
-        Console.WriteLine("\n\n");  
+        Console.WriteLine("\n\n");
         Console.WriteLine("Press Enter to start typing...");
 
-        Console.ReadLine(); 
+        Console.ReadLine();
         Console.Clear();
         Console.WriteLine("Type the following text:\n");
 
@@ -69,15 +79,21 @@ public class TypingTest
 
         Console.WriteLine(testText);
 
-
-        Console.SetCursorPosition(0, Console.CursorTop + 2); 
+        Console.SetCursorPosition(0, Console.CursorTop + 2);
 
         Console.ForegroundColor = ConsoleColor.Blue;
-        Console.BackgroundColor = ConsoleColor.Red; 
+        Console.BackgroundColor = ConsoleColor.Red;
 
         int charactersTyped = 0;
         int errors = 0;
         int i = 0;
+
+        Thread timerThread = new Thread(() =>
+        {
+            Thread.Sleep(60000);
+            isTestActive = false;
+        });
+        timerThread.Start();
 
         while (isTestActive && i < testText.Length)
         {
@@ -101,7 +117,7 @@ public class TypingTest
             i++;
         }
 
-        isTestActive = false;
+        timerThread.Join();
         Console.Clear();
         Console.WriteLine($"Test completed! Your result: {charactersTyped} characters, {errors} errors");
         Leaderboard.AddUserToLeaderboard(user);
@@ -162,8 +178,6 @@ public class Program
 {
     public static void Main()
     {
-        Leaderboard.LoadLeaderboard();
-
         while (true)
         {
             int choice = ArrowMenu.ShowMenu(
